@@ -75,7 +75,7 @@ int main()
     char filter_exp[] = "tcp"; //tcp protocol만 필터링링
     bpf_u_int32 net;
   
-    // Step 1: Open live pcap session on NIC with name enp0s3
+    // Step 1: Open live pcap session on NIC with name 
     handle = pcap_open_live("eth0", BUFSIZ, 1, 1000, errbuf);
   
     // Step 2: Compile filter_exp into BPF psuedo-code
