@@ -6,7 +6,7 @@
 #include "myheader.h"
 
 // char buffer[1024];
-void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
+void got_packet(unsigned char *args, const struct pcap_pkthdr *header, const unsigned char *packet)
 {
     /* ehernet header*/
     struct ethheader *eth = (struct ethheader *)packet;
@@ -36,16 +36,47 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
                 const char *payload = (const char *)(packet + sizeof(struct ethheader) + sizeof(struct ipheader) + sizeof(struct tcpheader));
                 /*payload_len = captured packet - headers */
                 int payload_len = header->len - (sizeof(struct ethheader) + sizeof(struct ipheader) + sizeof(struct tcpheader));
+                // if (payload_len > 0)
+                // {
+                //     printf("[MSG]\n");
+                //     printf("payload: ");
+                //     for (int i = 0; i < payload_len; i++)
+                //     {
+                //         printf("%02x ", (unsigned char)(payload[i]));
+                //     }
+                //     printf("\n");
+
+                // }
+                // else
+                // {
+                //     printf("[MSG]\n");
+                //     printf("There is No payload\n");
+                // }
+                // break;
                 if (payload_len > 0)
                 {
-                    printf("[MSG]\n");
-                    printf("payload: ");
-                    for (int i = 0; i < payload_len; i++)
+                    // HTTP Request인지 간단히 검사 (시작 문자열이 GET/POST/HEAD/HTTP)
+                    if (strncmp(payload, "GET", 3) == 0 || strncmp(payload, "POST", 4) == 0 ||
+                        strncmp(payload, "HEAD", 4) == 0 || strncmp(payload, "HTTP", 4) == 0)
                     {
-                        printf("%02x ", (u_char)(payload[i]));
+                        printf("[MSG]\n");
+                        printf("HTTP message:\n");
+                        // 문자열로 안전하게 출력 (null 종료 주의)
+                        char *http_data = (char *)malloc(payload_len + 1);
+                        if (http_data == NULL) {
+                            perror("malloc");
+                            return;
+                        }
+                        memcpy(http_data, payload, payload_len);
+                        http_data[payload_len] = '\0';  // 문자열 종료
+                        printf("%s\n", http_data);
+                        free(http_data);
                     }
-                    printf("\n");
-
+                    else
+                    {
+                        printf("[MSG]\n");
+                        printf("Payload exists but is not HTTP\n");
+                    }
                 }
                 else
                 {
@@ -75,8 +106,13 @@ int main()
     char filter_exp[] = "tcp"; //tcp protocol만 필터링링
     bpf_u_int32 net;
   
-    // Step 1: Open live pcap session on NIC with name enp0s3
+    // Step 1: Open live pcap session on NIC with name
     handle = pcap_open_live("eth0", BUFSIZ, 1, 1000, errbuf);
+    
+    if (handle == NULL) {
+        fprintf(stderr, "Couldn't open device: %s\n", errbuf);
+        exit(EXIT_FAILURE);
+    }
   
     // Step 2: Compile filter_exp into BPF psuedo-code
     pcap_compile(handle, &fp, filter_exp, 0, net);
